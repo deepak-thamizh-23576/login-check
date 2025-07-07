@@ -12,6 +12,11 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+app.get('/', (req, res) => {
+  res.send('Backend is running!');
+});
+
+
 app.post("/session-login", async (req, res) => {
   const idToken = req.body.idToken;
 
