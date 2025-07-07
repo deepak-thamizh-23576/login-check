@@ -3,7 +3,10 @@ const app = express();
 const admin = require("firebase-admin");
 const cors = require("cors");
 
-app.use(cors());
+app.use(cors({
+  origin: 'https://login-check-app.web.app',  // your Firebase frontend URL
+  credentials: true
+}));
 app.use(express.json());
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
@@ -15,7 +18,6 @@ admin.initializeApp({
 app.get('/', (req, res) => {
   res.send('Backend is running!');
 });
-
 
 app.post("/session-login", async (req, res) => {
   const idToken = req.body.idToken;
