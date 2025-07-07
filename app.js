@@ -67,7 +67,7 @@ app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res)
     const { authorizationToken, apiUrl, downloadUrl, allowed, accountId } = authRes.data;
 
     // Step 2: Get upload URL
-    const bucketId = "your_bucket_id";
+    const bucketId = "2a3e8b5b5d36e9679277041b";
     const uploadUrlRes = await axios.post(
       `${apiUrl}/b2api/v2/b2_get_upload_url`,
       { bucketId },
