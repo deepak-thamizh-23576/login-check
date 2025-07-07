@@ -31,4 +31,12 @@ app.post("/session-login", async (req, res) => {
   }
 });
 
+app.post("/logout", (req, res) => {
+  res.clearCookie("connect.sid");
+  req.session.destroy(() => {
+    res.status(200).send("Logged out");
+  });
+});
+
+
 app.listen(3000, () => console.log("Server started on port 3000"));
