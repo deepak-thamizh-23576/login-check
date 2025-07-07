@@ -6,7 +6,7 @@ const cors = require("cors");
 app.use(cors());
 app.use(express.json());
 
-const serviceAccount = require("./login-backend/login-check-4a8b8-firebase-adminsdk-fbsvc-30aa260fcc.json");
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
