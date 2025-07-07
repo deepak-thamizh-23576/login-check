@@ -10,7 +10,7 @@ const fs = require("fs");
 
 const upload = multer({ dest: "uploads/" }); // temporary storage
 
-app.use(cors({
+app.options('*', cors({
   origin: 'https://login-check-app.web.app',  // your Firebase frontend URL
   credentials: true
 }));
@@ -21,6 +21,20 @@ const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
+const verifyFirebaseToken = async (req, res, next) => {
+  const idToken = req.headers.authorization?.split('Bearer ')[1];
+  if (!idToken) return res.status(401).send("No token provided");
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    return res.status(401).send("Invalid token");
+  }
+};
+
 
 app.get('/', (req, res) => {
   res.send('Backend is running!');
@@ -38,14 +52,7 @@ app.post("/session-login", async (req, res) => {
   }
 });
 
-app.post("/logout", (req, res) => {
-  res.clearCookie("connect.sid");
-  req.session.destroy(() => {
-    res.status(200).send("Logged out");
-  });
-});
-
-app.post("/upload", upload.single("file"), async (req, res) => {
+app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res) => {
   try {
     const file = req.file;
 
