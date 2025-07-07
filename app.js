@@ -10,6 +10,11 @@ const fs = require("fs");
 
 const upload = multer({ dest: "uploads/" }); // temporary storage
 
+app.use(cors({
+  origin: 'https://login-check-app.web.app',
+  credentials: true
+}));
+
 app.options('*', cors({
   origin: 'https://login-check-app.web.app',  // your Firebase frontend URL
   credentials: true
