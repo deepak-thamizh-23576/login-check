@@ -8,6 +8,9 @@ const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
 
+const Task = require("./models/task"); // ✅ Correct path
+
+
 const upload = multer({ dest: "uploads/" }); // temporary storage
 
 app.use(cors({
@@ -56,6 +59,62 @@ app.post("/session-login", async (req, res) => {
     res.status(401).send("Unauthorized");
   }
 });
+
+app.post("/add-task", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+
+    if (!idToken) {
+      return res.status(401).json({ error: "Missing ID token" });
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const userId = decodedToken.uid;
+
+    const { name, date, imageUrl } = req.body;
+
+    if (!name || !date) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const task = new Task({
+      name,
+      date,
+      imageUrl: imageUrl || "",
+      userId,
+    });
+
+    await task.save();
+    res.status(201).json({ message: "Task saved successfully" });
+  } catch (error) {
+    console.error("Add Task Error:", error.message);
+    res.status(500).json({ error: "Failed to save task" });
+  }
+});
+
+app.get("/get-tasks", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+
+    if (!idToken) {
+      return res.status(401).json({ error: "Missing ID token" });
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const userId = decodedToken.uid;
+
+    const tasks = await Task.find({ userId });
+
+    res.status(200).json({ tasks });
+  } catch (error) {
+    console.error("Get Tasks Error:", error.message);
+    res.status(500).json({ error: "Failed to load tasks" });
+  }
+});
+
+
 
 app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res) => {
   try {
