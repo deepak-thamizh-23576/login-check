@@ -13,6 +13,15 @@ const Task = require("./models/task"); // ✅ Correct path
 
 const upload = multer({ dest: "uploads/" }); // temporary storage
 
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log("✅ Connected to MongoDB Atlas");
+}).catch((err) => {
+  console.error("❌ MongoDB connection error:", err);
+});
+
 app.use(cors({
   origin: 'https://login-check-app.web.app',
   credentials: true
