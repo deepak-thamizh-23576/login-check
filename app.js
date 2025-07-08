@@ -99,7 +99,12 @@ app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res)
 
     fs.unlinkSync(file.path); // remove local file
 
-    res.json({ message: "File uploaded to Backblaze successfully" });
+    const publicUrl = `https://f000.backblazeb2.com/file/To-do-Images/${encodeURIComponent(fileName)}`;
+
+    res.json({ 
+      message: "File uploaded to Backblaze successfully",
+      imageUrl: publicUrl
+    });
   } catch (error) {
     console.error(error.response?.data || error.message);
     res.status(500).json({ error: "Upload failed" });
