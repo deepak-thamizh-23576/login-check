@@ -7,6 +7,8 @@ const multer = require("multer");
 const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
+const mongoose = require('mongoose');
+require('dotenv').config();
 
 const Task = require("./models/task"); // ✅ Correct path
 
