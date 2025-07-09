@@ -9,8 +9,9 @@ const FormData = require("form-data");
 const fs = require("fs");
 const mongoose = require('mongoose');
 
-const Task = require("./models/task"); // ✅ Correct path
+const Task = require("./models/task"); 
 
+const cloudinary = require('./cloudinary.config');
 
 const upload = multer({ dest: "uploads/" }); // temporary storage
 
@@ -124,13 +125,18 @@ app.get("/get-tasks", async (req, res) => {
   }
 });
 
-
-
 app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res) => {
   try {
     const file = req.file;
 
-    // Step 1: Authorize with Backblaze
+    // Step 1: Upload to Cloudinary first
+    const cloudinaryResult = await cloudinary.uploader.upload(file.path, {
+      folder: "todo_images",
+    });
+
+    const cloudinaryUrl = cloudinaryResult.secure_url;
+
+    // Step 2: Upload to Backblaze
     const authRes = await axios.get("https://api.backblazeb2.com/b2api/v2/b2_authorize_account", {
       auth: {
         username: process.env.B2_KEY_ID,
@@ -138,10 +144,9 @@ app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res)
       },
     });
 
-    const { authorizationToken, apiUrl, downloadUrl, allowed, accountId } = authRes.data;
-
-    // Step 2: Get upload URL
+    const { authorizationToken, apiUrl } = authRes.data;
     const bucketId = "2a3e8b5b5d36e9679277041b";
+
     const uploadUrlRes = await axios.post(
       `${apiUrl}/b2api/v2/b2_get_upload_url`,
       { bucketId },
@@ -150,7 +155,6 @@ app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res)
 
     const { uploadUrl, authorizationToken: uploadAuthToken } = uploadUrlRes.data;
 
-    // Step 3: Upload file
     const fileBuffer = fs.readFileSync(file.path);
     const fileName = file.originalname;
 
@@ -166,13 +170,12 @@ app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res)
       headers: uploadHeaders,
     });
 
-    fs.unlinkSync(file.path); // remove local file
+    fs.unlinkSync(file.path); // Remove file after both uploads
 
-    const publicUrl = `${downloadUrl}/file/To-do-Images/${encodeURIComponent(fileName)}`;
-
-    res.json({ 
-      message: "File uploaded to Backblaze successfully",
-      imageUrl: publicUrl
+    // Return only the Cloudinary URL to frontend
+    res.json({
+      message: "Uploaded to Cloudinary and Backblaze",
+      imageUrl: cloudinaryUrl,
     });
   } catch (error) {
     console.error(error.response?.data || error.message);
