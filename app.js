@@ -94,6 +94,7 @@ app.post("/add-task", async (req, res) => {
       date,
       imageUrl: imageUrl || "",
       userId,
+      status: "pending"
     });
 
     await task.save();
