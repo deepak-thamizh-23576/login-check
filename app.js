@@ -85,7 +85,7 @@ app.post("/add-task", async (req, res) => {
 
     const { name, date, imageUrl } = req.body;
 
-    if (!name || !date) {
+    if (!name) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -93,6 +93,7 @@ app.post("/add-task", async (req, res) => {
       name,
       date,
       imageUrl: imageUrl || "",
+      userId,
       status: "pending"
     });
 
