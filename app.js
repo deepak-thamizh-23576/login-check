@@ -204,5 +204,17 @@ app.post("/update-task-status", verifyFirebaseToken, async (req, res) => {
   }
 });
 
+app.get("/get-completed-tasks", verifyFirebaseToken, async (req, res) => {
+  const userId = req.user.uid;
+
+  try {
+    const tasks = await Task.find({ userId, status: "completed" });
+    res.json({ tasks });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load completed tasks" });
+  }
+});
+
+
 
 app.listen(3000, () => console.log("Server started on port 3000"));
