@@ -188,17 +188,21 @@ app.post("/update-task-status", verifyFirebaseToken, async (req, res) => {
   const userId = req.user.uid;
 
   try {
-    await userModel.updateOne(
+    const updated = await userModel.updateOne(
       { _id: taskId, userId },
       { $set: { status } }
     );
 
+    if (updated.modifiedCount === 0) {
+      return res.status(404).json({ error: "Task not found or not updated" });
+    }
+
     res.json({ message: "Status updated" });
   } catch (err) {
-    res.status(500).json({ error: "Update failed" });
+    console.error("Update task status error:", err); // ⬅️ log full error
+    res.status(500).json({ error: "Update failed", details: err.message });
   }
 });
-
 
 
 app.listen(3000, () => console.log("Server started on port 3000"));
