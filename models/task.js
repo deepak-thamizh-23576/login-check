@@ -5,6 +5,11 @@ const taskSchema = new mongoose.Schema({
   date: String,
   imageUrl: String,
   userId: String,
+  status: {
+    type: String,
+    enum: ["pending", "completed"],
+    default: "pending"
+  }
 });
 
 module.exports = mongoose.model("Task", taskSchema);

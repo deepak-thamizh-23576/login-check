@@ -116,7 +116,7 @@ app.get("/get-tasks", async (req, res) => {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const userId = decodedToken.uid;
 
-    const tasks = await Task.find({ userId });
+    const tasks = await Task.find({ userId, status: "pending" });
 
     res.status(200).json({ tasks });
   } catch (error) {
@@ -182,6 +182,23 @@ app.post("/upload", verifyFirebaseToken, upload.single("file"), async (req, res)
     res.status(500).json({ error: "Upload failed" });
   }
 });
+
+app.post("/update-task-status", verifyFirebaseToken, async (req, res) => {
+  const { taskId, status } = req.body;
+  const userId = req.user.uid;
+
+  try {
+    await userModel.updateOne(
+      { _id: taskId, userId },
+      { $set: { status } }
+    );
+
+    res.json({ message: "Status updated" });
+  } catch (err) {
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
 
 
 app.listen(3000, () => console.log("Server started on port 3000"));
