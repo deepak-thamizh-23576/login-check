@@ -188,7 +188,7 @@ app.post("/update-task-status", verifyFirebaseToken, async (req, res) => {
   const userId = req.user.uid;
 
   try {
-    const updated = await userModel.updateOne(
+    const updated = await Task.updateOne(
       { _id: taskId, userId },
       { $set: { status } }
     );
