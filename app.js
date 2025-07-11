@@ -10,7 +10,6 @@ const cloudinary = require('./cloudinary.config');
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" }); // temporary storage
 
-const multer = require("multer");
 const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
