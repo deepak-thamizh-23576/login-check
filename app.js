@@ -92,6 +92,14 @@ app.post("/session-login", async (req, res) => {
     console.error("Session login error:", err.message);
     res.status(401).send("Unauthorized");
   }
+  if (email.endsWith("@zohocorp.com")) {
+  try {
+    const tasks = await fetchZohoTasksForUser(userId); 
+  } catch (err) {
+    console.error("Zoho fetch error:", err.message);
+  }
+}
+
 });
 
 app.post("/add-task", async (req, res) => {
@@ -238,6 +246,36 @@ app.get("/get-completed-tasks", verifyFirebaseToken, async (req, res) => {
     res.status(500).json({ error: "Failed to load completed tasks" });
   }
 });
+
+async function fetchZohoTasksForUser(userId) {
+  const user = await collection.findById(userId);
+  if (!user || !user.refreshToken) {
+    throw new Error("No Zoho refresh token found");
+  }
+
+  const tokenRes = await axios.post("https://accounts.zoho.com/oauth/v2/token", null, {
+    params: {
+      refresh_token: user.refreshToken,
+      client_id: process.env.ZOHO_CLIENT_ID,
+      client_secret: process.env.ZOHO_CLIENT_SECRET,
+      grant_type: "refresh_token"
+    }
+  });
+
+  const accessToken = tokenRes.data.access_token;
+
+  const crmRes = await axios.get("https://www.zohoapis.com/crm/v2/Tasks", {
+    headers: { Authorization: `Zoho-oauthtoken ${accessToken}` }
+  });
+
+  const tasks = crmRes.data.data;
+  if (!tasks || tasks.length === 0) {
+    throw new Error("No tasks found");
+  }
+
+  return tasks;
+}
+
 
 app.get("/zoho/login", (req, res) => {
   const client_id = "1000.PUGMOQUGOF77S54ISWPMOK3WSFGHXB";
