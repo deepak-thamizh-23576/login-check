@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 
 const userSchema = new mongoose.Schema({
+  firebaseUid: String,
   name: String,
   password: String,
   googleId: String,
