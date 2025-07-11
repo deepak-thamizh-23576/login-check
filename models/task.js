@@ -3,12 +3,10 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   firebaseUid: String,
-  name: String,
-  password: String,
-  googleId: String,
-  premium: Boolean,
+  email: String,
+  signInProvider: String,
+  zohoRefreshToken: String,
   zohoUserId: String,
-  refreshToken: String
 });
 
 const taskSchema = new mongoose.Schema({

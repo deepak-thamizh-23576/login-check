@@ -273,13 +273,13 @@ app.get("/get-completed-tasks", verifyFirebaseToken, async (req, res) => {
 
 async function fetchZohoTasksForUser(userId) {
   const user = await collection.findById(userId);
-  if (!user || !user.refreshToken) {
+  if (!user || !user.zohoRefreshToken) {
     throw new Error("No Zoho refresh token found");
   }
 
   const tokenRes = await axios.post("https://accounts.zoho.com/oauth/v2/token", null, {
     params: {
-      refresh_token: user.refreshToken,
+      refresh_token: user.zohoRefreshToken,
       client_id: process.env.ZOHO_CLIENT_ID,
       client_secret: process.env.ZOHO_CLIENT_SECRET,
       grant_type: "refresh_token"
@@ -303,7 +303,7 @@ async function fetchZohoTasksForUser(userId) {
 
 app.get("/zoho/login", (req, res) => {
   const client_id = "1000.PUGMOQUGOF77S54ISWPMOK3WSFGHXB";
-  const redirect_uri = "https://login-check-app.web.app/zoho/callback";
+  const redirect_uri = "https://login-check-6w4b.onrender.com/zoho/callback"; 
   const scope = "ZohoCRM.modules.ALL";
   const response_type = "code";
   const access_type = "offline";
@@ -327,7 +327,7 @@ app.get("/zoho/callback", async (req, res) => {
         code,
         client_id: process.env.ZOHO_CLIENT_ID,
         client_secret: process.env.ZOHO_CLIENT_SECRET,
-        redirect_uri: "https://login-check-app.web.app/zoho/callback",
+        redirect_uri: "https://login-check-6w4b.onrender.com/zoho/callback",
         grant_type: "authorization_code"
       }
     });
@@ -367,13 +367,13 @@ app.get("/zoho-tasks", async (req, res) => {
 
     // Step 1: Find user and get refreshToken
     const user = await collection.findById(userId);
-    if (!user || !user.refreshToken)
+    if (!user || !user.zohoRefreshToken)
       return res.status(403).json({ error: "No Zoho refresh token found" });
 
     // Step 2: Get new access_token using refresh_token
     const tokenRes = await axios.post("https://accounts.zoho.com/oauth/v2/token", null, {
       params: {
-        refresh_token: user.refreshToken,
+        refresh_token: user.zohoRefreshToken,
         client_id: process.env.ZOHO_CLIENT_ID,
         client_secret: process.env.ZOHO_CLIENT_SECRET,
         grant_type: "refresh_token"
