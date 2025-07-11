@@ -2,7 +2,6 @@ const express = require("express");
 const app = express();
 const admin = require("firebase-admin");
 const cors = require("cors");
-const router = express.Router();
 const { collection } = require("./models/task");
 
 const multer = require("multer");
@@ -231,7 +230,7 @@ app.get("/zoho/login", (req, res) => {
 });
 
 
-router.get("/zoho/callback", async (req, res) => {
+app.get("/zoho/callback", async (req, res) => {
   const code = req.query.code;
 
   if (!code) {
@@ -277,7 +276,7 @@ router.get("/zoho/callback", async (req, res) => {
   }
 });
 
-router.get("/zoho-tasks", async (req, res) => {
+app.get("/zoho-tasks", async (req, res) => {
   try {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -313,9 +312,5 @@ router.get("/zoho-tasks", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch tasks from Zoho" });
   }
 });
-
-module.exports = router;
-
-
 
 app.listen(3000, () => console.log("Server started on port 3000"));
