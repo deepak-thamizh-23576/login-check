@@ -77,7 +77,8 @@ app.post("/session-login", async (req, res) => {
 
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
-    console.log("User ID:", decoded.uid);
+    const firebaseUid = decoded.uid; 
+    console.log("User ID:", firebaseUid); 
 
     // Find or create user in your MongoDB
     let user = await collection.findOne({ firebaseUid });
