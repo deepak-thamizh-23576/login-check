@@ -327,7 +327,7 @@ app.get("/zoho/callback", async (req, res) => {
         code,
         client_id: process.env.ZOHO_CLIENT_ID,
         client_secret: process.env.ZOHO_CLIENT_SECRET,
-        redirect_uri: "https://login-check-6w4b.onrender.com/zoho/callback",
+        redirect_uri: "https://login-check-app.web.app/zoho/callback",
         grant_type: "authorization_code"
       }
     });
