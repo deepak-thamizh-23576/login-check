@@ -77,30 +77,35 @@ app.post("/session-login", async (req, res) => {
 
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
-    const firebaseUid = decoded.uid; 
-    console.log("User ID:", firebaseUid); 
+    const firebaseUid = decoded.uid;
+    const email = decoded.email;
 
-    // Find or create user in your MongoDB
+    console.log("User ID:", firebaseUid);
+
+    // Find or create user in MongoDB
     let user = await collection.findOne({ firebaseUid });
     if (!user) {
-      user = await collection.create({ firebaseUid });
+      user = await collection.create({ firebaseUid, email });
     }
 
     req.session.userId = user._id;
+    req.session.email = email;
+    await req.session.save();
+
+    // OPTIONAL: Pre-fetch Zoho tasks for Zoho users (don't block response)
+    if (email && email.endsWith("@zohocorp.com")) {
+      fetchZohoTasksForUser(user._id).catch(err =>
+        console.error("Zoho fetch error:", err.message)
+      );
+    }
+
     res.status(200).send("Session established!");
   } catch (err) {
     console.error("Session login error:", err.message);
     res.status(401).send("Unauthorized");
   }
-  if (email.endsWith("@zohocorp.com")) {
-  try {
-    const tasks = await fetchZohoTasksForUser(userId); 
-  } catch (err) {
-    console.error("Zoho fetch error:", err.message);
-  }
-}
-
 });
+
 
 app.post("/add-task", async (req, res) => {
   try {
