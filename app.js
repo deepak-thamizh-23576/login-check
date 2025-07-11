@@ -220,7 +220,7 @@ app.get("/get-completed-tasks", verifyFirebaseToken, async (req, res) => {
 
 app.get("/zoho/login", (req, res) => {
   const client_id = "1000.PUGMOQUGOF77S54ISWPMOK3WSFGHXB";
-  const redirect_uri = "https://monitor-backend-shxt.onrender.com/zoho/callback";
+  const redirect_uri = "https://login-check-app.web.app/zoho/callback";
   const scope = "ZohoCRM.modules.ALL";
   const response_type = "code";
   const access_type = "offline";
@@ -244,7 +244,7 @@ router.get("/zoho/callback", async (req, res) => {
         code,
         client_id: process.env.ZOHO_CLIENT_ID,
         client_secret: process.env.ZOHO_CLIENT_SECRET,
-        redirect_uri: "https://monitor-backend-shxt.onrender.com/zoho/callback",
+        redirect_uri: "https://login-check-app.web.app/zoho/callback",
         grant_type: "authorization_code"
       }
     });
