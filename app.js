@@ -2,6 +2,8 @@ const express = require("express");
 const app = express();
 const admin = require("firebase-admin");
 const cors = require("cors");
+const router = express.Router();
+const { collection } = require("./model/user.data.js");
 
 const multer = require("multer");
 const axios = require("axios");
@@ -215,6 +217,104 @@ app.get("/get-completed-tasks", verifyFirebaseToken, async (req, res) => {
     res.status(500).json({ error: "Failed to load completed tasks" });
   }
 });
+
+app.get("/zoho/login", (req, res) => {
+  const client_id = "1000.PUGMOQUGOF77S54ISWPMOK3WSFGHXB";
+  const redirect_uri = "https://monitor-backend-shxt.onrender.com/zoho/callback";
+  const scope = "ZohoCRM.modules.ALL";
+  const response_type = "code";
+  const access_type = "offline";
+
+  const zohoAuthURL = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${client_id}&response_type=${response_type}&access_type=${access_type}&redirect_uri=${redirect_uri}`;
+
+  res.redirect(zohoAuthURL);
+});
+
+
+router.get("/zoho/callback", async (req, res) => {
+  const code = req.query.code;
+
+  if (!code) {
+    return res.status(400).send("Missing code from Zoho");
+  }
+
+  try {
+    const response = await axios.post("https://accounts.zoho.com/oauth/v2/token", null, {
+      params: {
+        code,
+        client_id: process.env.ZOHO_CLIENT_ID,
+        client_secret: process.env.ZOHO_CLIENT_SECRET,
+        redirect_uri: "https://monitor-backend-shxt.onrender.com/zoho/callback",
+        grant_type: "authorization_code"
+      }
+    });
+
+    const { access_token, refresh_token } = response.data;
+
+    // ✅ Get Zoho user info
+    const userInfo = await axios.get("https://www.zohoapis.com/crm/v2/users", {
+      headers: {
+        Authorization: `Zoho-oauthtoken ${access_token}`
+      }
+    });
+
+    const zohoUserId = userInfo.data.users?.[0]?.id;
+
+    if (!req.session.userId) {
+      return res.status(401).send("User not logged into your app.");
+    }
+
+    // ✅ Save refresh_token and zohoUserId in DB
+    await collection.updateOne(
+      { _id: req.session.userId },
+      { $set: { refreshToken: refresh_token, zohoUserId } }
+    );
+
+    res.send("✅ Zoho connected successfully! You can now sync your tasks.");
+  } catch (error) {
+    console.error("Zoho callback error:", error.response?.data || error.message);
+    res.status(500).send("❌ Failed to exchange Zoho auth code.");
+  }
+});
+
+router.get("/zoho-tasks", async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Not logged in" });
+
+    // Step 1: Find user and get refreshToken
+    const user = await collection.findById(userId);
+    if (!user || !user.refreshToken)
+      return res.status(403).json({ error: "No Zoho refresh token found" });
+
+    // Step 2: Get new access_token using refresh_token
+    const tokenRes = await axios.post("https://accounts.zoho.com/oauth/v2/token", null, {
+      params: {
+        refresh_token: user.refreshToken,
+        client_id: process.env.ZOHO_CLIENT_ID,
+        client_secret: process.env.ZOHO_CLIENT_SECRET,
+        grant_type: "refresh_token"
+      }
+    });
+
+    const access_token = tokenRes.data.access_token;
+
+    // Step 3: Fetch tasks (e.g., from "Tasks" module in Zoho CRM)
+    const tasksRes = await axios.get("https://www.zohoapis.com/crm/v2/Tasks", {
+      headers: {
+        Authorization: `Zoho-oauthtoken ${access_token}`
+      }
+    });
+
+    const tasks = tasksRes.data.data;
+    res.json(tasks);
+  } catch (error) {
+    console.error("Error fetching Zoho tasks:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to fetch tasks from Zoho" });
+  }
+});
+
+module.exports = router;
 
 
 
