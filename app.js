@@ -3,18 +3,30 @@ const app = express();
 const admin = require("firebase-admin");
 const cors = require("cors");
 const { collection } = require("./models/task");
+const { Task } = require("./models/task");
+
+const cloudinary = require('./cloudinary.config');
+
+const upload = multer({ dest: "uploads/" }); // temporary storage
 
 const multer = require("multer");
 const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
 const mongoose = require('mongoose');
+const session = require("express-session");
 
-const { Task } = require("./models/task");
-
-const cloudinary = require('./cloudinary.config');
-
-const upload = multer({ dest: "uploads/" }); // temporary storage
+app.use(
+  session({
+    secret: "loginCheck",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true,
+      sameSite: "none",
+    },
+  })
+);
 
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
@@ -66,8 +78,17 @@ app.post("/session-login", async (req, res) => {
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
     console.log("User ID:", decoded.uid);
-    res.status(200).send("Backend accessed!");
+
+    // Find or create user in your MongoDB
+    let user = await collection.findOne({ firebaseUid });
+    if (!user) {
+      user = await collection.create({ firebaseUid });
+    }
+
+    req.session.userId = user._id;
+    res.status(200).send("Session established!");
   } catch (err) {
+    console.error("Session login error:", err.message);
     res.status(401).send("Unauthorized");
   }
 });
