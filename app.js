@@ -11,7 +11,7 @@ const FormData = require("form-data");
 const fs = require("fs");
 const mongoose = require('mongoose');
 
-const Task = require("./models/task"); 
+const { Task } = require("./models/task");
 
 const cloudinary = require('./cloudinary.config');
 
