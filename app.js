@@ -3,7 +3,7 @@ const app = express();
 const admin = require("firebase-admin");
 const cors = require("cors");
 const router = express.Router();
-const { collection } = require("./model/user.data.js");
+const { collection } = require("./models/task");
 
 const multer = require("multer");
 const axios = require("axios");
