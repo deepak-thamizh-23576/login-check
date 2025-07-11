@@ -16,11 +16,17 @@ const fs = require("fs");
 const mongoose = require('mongoose');
 const session = require("express-session");
 
+const MongoStore = require("connect-mongo");
+
 app.use(
   session({
     secret: "loginCheck",
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      ttl: 14 * 24 * 60 * 60, // Optional: 14 days
+    }),
     cookie: {
       secure: true,
       sameSite: "none",
@@ -93,6 +99,11 @@ app.post("/session-login", async (req, res) => {
         signInProvider: provider,
         zohoRefreshToken: refreshToken,
       });
+    } else {
+      // Update email/refresh token if changed
+      user.email = email;
+      if (refreshToken) user.zohoRefreshToken = refreshToken;
+      await user.save();
     }
 
     req.session.userId = user._id;
