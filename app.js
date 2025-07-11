@@ -81,9 +81,9 @@ app.post("/session-login", async (req, res) => {
     console.log("User ID:", firebaseUid); 
 
     // Find or create user in your MongoDB
-    let user = await collection.findOne({ firebaseUid: decoded.uid });
+    let user = await collection.findOne({ firebaseUid });
     if (!user) {
-      user = await collection.create({ firebaseUid: decoded.uid });
+      user = await collection.create({ firebaseUid });
     }
 
     req.session.userId = user._id;
