@@ -74,26 +74,34 @@ app.get('/', (req, res) => {
 
 app.post("/session-login", async (req, res) => {
   const idToken = req.body.idToken;
+  const refreshToken = req.body.refreshToken || null;
 
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
     const firebaseUid = decoded.uid;
-    const email = decoded.email;
+    const email = decoded.email || "";
+    const provider = decoded.firebase?.sign_in_provider || "";
 
     console.log("User ID:", firebaseUid);
 
     // Find or create user in MongoDB
     let user = await collection.findOne({ firebaseUid });
     if (!user) {
-      user = await collection.create({ firebaseUid, email });
+      user = await collection.create({ 
+        firebaseUid,
+        email,
+        signInProvider: provider,
+        zohoRefreshToken: refreshToken,
+      });
     }
 
     req.session.userId = user._id;
+
     req.session.email = email;
     await req.session.save();
 
     // OPTIONAL: Pre-fetch Zoho tasks for Zoho users (don't block response)
-    if (email && email.endsWith("@zohocorp.com")) {
+    if (email.endsWith("@zohocorp.com") && user.zohoRefreshToken) {
       fetchZohoTasksForUser(user._id).catch(err =>
         console.error("Zoho fetch error:", err.message)
       );
