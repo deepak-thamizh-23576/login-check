@@ -7,6 +7,7 @@ const { Task } = require("./models/task");
 
 const cloudinary = require('./cloudinary.config');
 
+const multer = require("multer");
 const upload = multer({ dest: "uploads/" }); // temporary storage
 
 const multer = require("multer");
