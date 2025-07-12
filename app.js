@@ -286,12 +286,12 @@ app.get("/zoho-auth-start", verifyFirebaseToken, (req, res) => {
   const redirectUri = process.env.ZOHO_REDIRECT_URI;
   const scope = "ZohoCRM.modules.ALL";
   const state = req.headers.authorization?.split('Bearer ')[1]; // Firebase ID token
-  const url = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const url = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
   res.redirect(url);
 });
 
 // Step 2: Zoho redirects back here with code
-app.get("/zoho-oauth-callback", verifyFirebaseToken, async (req, res) => {
+app.get("/zoho-oauth-callback", async (req, res) => {
   const code = req.query.code;
   const idToken = req.query.state;
   const clientId = process.env.ZOHO_CLIENT_ID;
