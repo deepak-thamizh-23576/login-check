@@ -113,11 +113,11 @@ app.post("/session-login", async (req, res) => {
     await req.session.save();
 
     // OPTIONAL: Pre-fetch Zoho tasks for Zoho users (don't block response)
-    if (email.endsWith("@zohocorp.com") && user.zohoRefreshToken) {
-      fetchZohoTasksForUser(user._id).catch(err =>
-        console.error("Zoho fetch error:", err.message)
-      );
-    }
+    // if (email.endsWith("@zohocorp.com") && user.zohoRefreshToken) {
+    //   fetchZohoTasksForUser(user._id).catch(err =>
+    //     console.error("Zoho fetch error:", err.message)
+    //   );
+    // }
 
     res.status(200).send("Session established!");
   } catch (err) {
@@ -361,9 +361,11 @@ app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
     }
 
     const accessToken = await getZohoAccessToken(user.zohoRefreshToken);
+    const zohoRegion = process.env.ZOHO_API_REGION || "com";
+    const zohoApiBase = `https://www.zohoapis.${zohoRegion}`;
 
     const zohoResp = await axios.get(
-      "https://www.zohoapis.com/crm/v2/Tasks",
+      `${zohoApiBase}/crm/v2/Tasks`,
       {
         headers: { Authorization: `Zoho-oauthtoken ${accessToken}` }
       }
@@ -371,8 +373,8 @@ app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
 
     res.json({ tasks: zohoResp.data.data || [] });
   } catch (err) {
-    console.error("Zoho tasks error:", err.message);
-    res.status(500).json({ error: "Failed to fetch Zoho tasks" });
+    console.error("Zoho tasks error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Failed to fetch Zoho tasks", details: err.response?.data || err.message });
   }
 });
 
