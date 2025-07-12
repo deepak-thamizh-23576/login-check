@@ -285,6 +285,7 @@ app.get("/zoho-auth-start", verifyFirebaseToken, (req, res) => {
   const clientId = process.env.ZOHO_CLIENT_ID;
   const redirectUri = process.env.ZOHO_REDIRECT_URI;
   const scope = "ZohoCRM.modules.ALL";
+  const state = req.headers.authorization?.split('Bearer ')[1]; // Firebase ID token
   const url = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}`;
   res.redirect(url);
 });
@@ -292,6 +293,7 @@ app.get("/zoho-auth-start", verifyFirebaseToken, (req, res) => {
 // Step 2: Zoho redirects back here with code
 app.get("/zoho-oauth-callback", verifyFirebaseToken, async (req, res) => {
   const code = req.query.code;
+  const idToken = req.query.state;
   const clientId = process.env.ZOHO_CLIENT_ID;
   const clientSecret = process.env.ZOHO_CLIENT_SECRET;
   const redirectUri = process.env.ZOHO_REDIRECT_URI;
@@ -311,8 +313,13 @@ app.get("/zoho-oauth-callback", verifyFirebaseToken, async (req, res) => {
     );
 
     const refreshToken = tokenResp.data.refresh_token;
+
+    // Use the idToken to find the user
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const firebaseUid = decoded.uid;
+
     // Save refresh token to user
-    const user = await collection.findOne({ firebaseUid: req.user.uid });
+    const user = await collection.findOne({ firebaseUid });
     if (user && refreshToken) {
       user.zohoRefreshToken = refreshToken;
       await user.save();
