@@ -288,29 +288,40 @@ app.get("/zoho-auth-start", (req, res) => {
   const idToken = req.query.idToken;
 
   if (!idToken) return res.status(400).send("Missing idToken");
-  // Optionally verify the token here if you want
-  const url = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&state=${idToken}`;
+  
+  // Add prompt=consent to force refresh token generation
+  const url = `https://accounts.zoho.${process.env.ZOHO_API_REGION || 'com'}/oauth/v2/auth?` +
+    `scope=${scope}` +
+    `&client_id=${clientId}` +
+    `&response_type=code` +
+    `&access_type=offline` +
+    `&prompt=consent` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&state=${idToken}`;
+  
+  console.log("Redirecting to Zoho OAuth URL:", url); // Debug log
   res.redirect(url);
 });
 
-// Step 2: Zoho redirects back here with code
-// Update the Zoho OAuth callback endpoint
+
 app.get("/zoho-oauth-callback", async (req, res) => {
   const code = req.query.code;
   const idToken = req.query.state;
-  const clientId = process.env.ZOHO_CLIENT_ID;
-  const clientSecret = process.env.ZOHO_CLIENT_SECRET;
-  const redirectUri = process.env.ZOHO_REDIRECT_URI;
   
+  if (!code) {
+    console.error("No code received from Zoho");
+    return res.status(400).send("No authorization code received");
+  }
+
   try {
-    // Exchange code for tokens using the correct Zoho region
+    // ... existing token exchange code ...
     const tokenResp = await axios.post(
       `https://accounts.zoho.${process.env.ZOHO_API_REGION || 'com'}/oauth/v2/token`,
       querystring.stringify({
         code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
+        client_id: process.env.ZOHO_CLIENT_ID,
+        client_secret: process.env.ZOHO_CLIENT_SECRET,
+        redirect_uri: process.env.ZOHO_REDIRECT_URI,
         grant_type: "authorization_code"
       }),
       { 
@@ -321,7 +332,11 @@ app.get("/zoho-oauth-callback", async (req, res) => {
     );
 
     console.log("Zoho token response:", tokenResp.data); // Add this for debugging
-
+    if (!tokenResp.data.refresh_token) {
+      console.error("No refresh token in Zoho response:", tokenResp.data);
+      throw new Error("No refresh token received from Zoho");
+    }
+    
     const refreshToken = tokenResp.data.refresh_token;
     if (!refreshToken) {
       throw new Error('No refresh token received from Zoho');
