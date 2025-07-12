@@ -281,7 +281,7 @@ app.get("/zoho-status", verifyFirebaseToken, async (req, res) => {
 });
 
 // Step 1: Start Zoho OAuth (redirect user to Zoho)
-app.get("/zoho-auth-start", verifyFirebaseToken, (req, res) => {
+app.get("/zoho-auth-start", (req, res) => {
   const clientId = process.env.ZOHO_CLIENT_ID;
   const redirectUri = process.env.ZOHO_REDIRECT_URI;
   const scope = "ZohoCRM.modules.ALL";
@@ -377,4 +377,5 @@ app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
 });
 
 
-app.listen(3000, () => console.log("Server started on port 3000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
