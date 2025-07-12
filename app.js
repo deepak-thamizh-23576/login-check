@@ -285,8 +285,11 @@ app.get("/zoho-auth-start", verifyFirebaseToken, (req, res) => {
   const clientId = process.env.ZOHO_CLIENT_ID;
   const redirectUri = process.env.ZOHO_REDIRECT_URI;
   const scope = "ZohoCRM.modules.ALL";
-  const state = req.headers.authorization?.split('Bearer ')[1]; // Firebase ID token
-  const url = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+  const idToken = req.query.idToken;
+
+  if (!idToken) return res.status(400).send("Missing idToken");
+  // Optionally verify the token here if you want
+  const url = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}&state=${idToken}`;
   res.redirect(url);
 });
 
