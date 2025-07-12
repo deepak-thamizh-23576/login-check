@@ -294,6 +294,7 @@ app.get("/zoho-auth-start", (req, res) => {
 });
 
 // Step 2: Zoho redirects back here with code
+// Update the Zoho OAuth callback endpoint
 app.get("/zoho-oauth-callback", async (req, res) => {
   const code = req.query.code;
   const idToken = req.query.state;
@@ -302,9 +303,9 @@ app.get("/zoho-oauth-callback", async (req, res) => {
   const redirectUri = process.env.ZOHO_REDIRECT_URI;
   
   try {
-    // Exchange code for tokens
+    // Exchange code for tokens using the correct Zoho region
     const tokenResp = await axios.post(
-      "https://accounts.zoho.com/oauth/v2/token",
+      `https://accounts.zoho.${process.env.ZOHO_API_REGION || 'com'}/oauth/v2/token`,
       querystring.stringify({
         code,
         client_id: clientId,
@@ -312,10 +313,19 @@ app.get("/zoho-oauth-callback", async (req, res) => {
         redirect_uri: redirectUri,
         grant_type: "authorization_code"
       }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      { 
+        headers: { 
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      }
     );
 
+    console.log("Zoho token response:", tokenResp.data); // Add this for debugging
+
     const refreshToken = tokenResp.data.refresh_token;
+    if (!refreshToken) {
+      throw new Error('No refresh token received from Zoho');
+    }
 
     // Use the idToken to find the user
     const decoded = await admin.auth().verifyIdToken(idToken);
@@ -323,48 +333,56 @@ app.get("/zoho-oauth-callback", async (req, res) => {
 
     // Save refresh token to user
     const user = await collection.findOne({ firebaseUid });
-    if (user && refreshToken) {
+    if (user) {
       user.zohoRefreshToken = refreshToken;
       await user.save();
+    } else {
+      console.error('User not found:', firebaseUid);
+      throw new Error('User not found');
     }
+
     // Redirect to home page
     res.redirect("https://login-check-app.web.app/home.html");
   } catch (err) {
-    res.status(500).send("Zoho OAuth failed: " + err.message);
+    console.error("Zoho OAuth error:", err.response?.data || err.message);
+    res.status(500).send("Zoho OAuth failed: " + (err.response?.data?.error || err.message));
   }
 });
 
-
-// Helper to get Zoho access token from refresh token
+// Update the getZohoAccessToken function
 async function getZohoAccessToken(refreshToken) {
   const params = new URLSearchParams({
     refresh_token: refreshToken,
     client_id: process.env.ZOHO_CLIENT_ID,
     client_secret: process.env.ZOHO_CLIENT_SECRET,
-    grant_type: "refresh_token",
+    grant_type: "refresh_token"
   });
+
   try {
-      const resp = await axios.post(
-        `https://accounts.zoho.${process.env.ZOHO_API_REGION || 'com'}/oauth/v2/token`,
-        params,
-        { 
-          headers: { 
-            "Content-Type": "application/x-www-form-urlencoded"
-          }
+    console.log('Attempting to refresh token with params:', params.toString()); // Add this for debugging
+
+    const resp = await axios.post(
+      `https://accounts.zoho.${process.env.ZOHO_API_REGION || 'com'}/oauth/v2/token`,
+      params.toString(),
+      { 
+        headers: { 
+          "Content-Type": "application/x-www-form-urlencoded"
         }
-      );
-      
-      if (!resp.data.access_token) {
-        console.error('Zoho response:', resp.data);
-        throw new Error('No access token received from Zoho');
       }
-      
-      return resp.data.access_token;
-    } catch (error) {
-      console.error('Zoho token refresh error:', error.response?.data || error.message);
-      throw error;
+    );
+    
+    console.log('Zoho refresh response:', resp.data); // Add this for debugging
+
+    if (!resp.data.access_token) {
+      throw new Error('No access token received from Zoho');
     }
+    
+    return resp.data.access_token;
+  } catch (error) {
+    console.error('Zoho token refresh error:', error.response?.data || error.message);
+    throw error;
   }
+}
 
 app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
   try {
