@@ -355,6 +355,7 @@ async function getZohoAccessToken(refreshToken) {
       );
       
       if (!resp.data.access_token) {
+        console.error('Zoho response:', resp.data);
         throw new Error('No access token received from Zoho');
       }
       
