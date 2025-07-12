@@ -6,6 +6,7 @@ const { collection } = require("./models/task");
 const { Task } = require("./models/task");
 
 const cloudinary = require('./cloudinary.config');
+const querystring = require("querystring");
 
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" }); // temporary storage
@@ -273,8 +274,56 @@ app.get("/get-completed-tasks", verifyFirebaseToken, async (req, res) => {
 
 
 //------------------------Zoho CRM tasks integration------------------------
+// Endpoint to check if Zoho is connected
+app.get("/zoho-status", verifyFirebaseToken, async (req, res) => {
+  const user = await collection.findOne({ firebaseUid: req.user.uid });
+  res.json({ connected: !!(user && user.zohoRefreshToken) });
+});
 
-// ...existing code...
+// Step 1: Start Zoho OAuth (redirect user to Zoho)
+app.get("/zoho-auth-start", verifyFirebaseToken, (req, res) => {
+  const clientId = process.env.ZOHO_CLIENT_ID;
+  const redirectUri = process.env.ZOHO_REDIRECT_URI;
+  const scope = "ZohoCRM.modules.ALL";
+  const url = `https://accounts.zoho.com/oauth/v2/auth?scope=${scope}&client_id=${clientId}&response_type=code&access_type=offline&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  res.redirect(url);
+});
+
+// Step 2: Zoho redirects back here with code
+app.get("/zoho-oauth-callback", verifyFirebaseToken, async (req, res) => {
+  const code = req.query.code;
+  const clientId = process.env.ZOHO_CLIENT_ID;
+  const clientSecret = process.env.ZOHO_CLIENT_SECRET;
+  const redirectUri = process.env.ZOHO_REDIRECT_URI;
+  
+  try {
+    // Exchange code for tokens
+    const tokenResp = await axios.post(
+      "https://accounts.zoho.com/oauth/v2/token",
+      querystring.stringify({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code"
+      }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+
+    const refreshToken = tokenResp.data.refresh_token;
+    // Save refresh token to user
+    const user = await collection.findOne({ firebaseUid: req.user.uid });
+    if (user && refreshToken) {
+      user.zohoRefreshToken = refreshToken;
+      await user.save();
+    }
+    // Redirect to home page
+    res.redirect("/home.html");
+  } catch (err) {
+    res.status(500).send("Zoho OAuth failed: " + err.message);
+  }
+});
+
 
 // Helper to get Zoho access token from refresh token
 async function getZohoAccessToken(refreshToken) {
@@ -296,16 +345,13 @@ async function getZohoAccessToken(refreshToken) {
 // Endpoint to get Zoho CRM tasks for the logged-in user
 app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
   try {
-    // Find user in DB
     const user = await collection.findOne({ firebaseUid: req.user.uid });
     if (!user || !user.zohoRefreshToken) {
       return res.status(400).json({ error: "No Zoho refresh token found" });
     }
 
-    // Get Zoho access token
     const accessToken = await getZohoAccessToken(user.zohoRefreshToken);
 
-    // Fetch tasks from Zoho CRM
     const zohoResp = await axios.get(
       "https://www.zohoapis.com/crm/v2/Tasks",
       {
@@ -319,6 +365,6 @@ app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch Zoho tasks" });
   }
 });
-// ...existing code...
+
 
 app.listen(3000, () => console.log("Server started on port 3000"));
