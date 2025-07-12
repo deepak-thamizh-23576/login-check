@@ -328,7 +328,7 @@ app.get("/zoho-oauth-callback", async (req, res) => {
       await user.save();
     }
     // Redirect to home page
-    res.redirect("/home.html");
+    res.redirect("https://login-check-app.web.app/home.html");
   } catch (err) {
     res.status(500).send("Zoho OAuth failed: " + err.message);
   }
