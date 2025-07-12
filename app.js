@@ -343,16 +343,28 @@ async function getZohoAccessToken(refreshToken) {
     client_secret: process.env.ZOHO_CLIENT_SECRET,
     grant_type: "refresh_token",
   });
+  try {
+      const resp = await axios.post(
+        `https://accounts.zoho.${process.env.ZOHO_API_REGION || 'com'}/oauth/v2/token`,
+        params.toString(),
+        { 
+          headers: { 
+            "Content-Type": "application/x-www-form-urlencoded"
+          }
+        }
+      );
+      
+      if (!resp.data.access_token) {
+        throw new Error('No access token received from Zoho');
+      }
+      
+      return resp.data.access_token;
+    } catch (error) {
+      console.error('Zoho token refresh error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
 
-  const resp = await axios.post(
-    "https://accounts.zoho.com/oauth/v2/token",
-    params.toString(),
-    { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-  );
-  return resp.data.access_token;
-}
-
-// Endpoint to get Zoho CRM tasks for the logged-in user
 app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
   try {
     const user = await collection.findOne({ firebaseUid: req.user.uid });
@@ -360,21 +372,40 @@ app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
       return res.status(400).json({ error: "No Zoho refresh token found" });
     }
 
-    const accessToken = await getZohoAccessToken(user.zohoRefreshToken);
-    const zohoRegion = process.env.ZOHO_API_REGION || "com";
-    const zohoApiBase = `https://www.zohoapis.${zohoRegion}`;
+    try {
+      const accessToken = await getZohoAccessToken(user.zohoRefreshToken);
+      const zohoRegion = process.env.ZOHO_API_REGION || "com";
+      const zohoApiBase = `https://www.zohoapis.${zohoRegion}`;
 
-    const zohoResp = await axios.get(
-      `${zohoApiBase}/crm/v2/Tasks`,
-      {
-        headers: { Authorization: `Zoho-oauthtoken ${accessToken}` }
+      const zohoResp = await axios.get(
+        `${zohoApiBase}/crm/v2/Tasks`,
+        {
+          headers: { 
+            Authorization: `Zoho-oauthtoken ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      res.json({ tasks: zohoResp.data.data || [] });
+    } catch (err) {
+      // If token is invalid, clear it and ask user to reconnect
+      if (err.response?.data?.code === 'INVALID_TOKEN') {
+        user.zohoRefreshToken = null;
+        await user.save();
+        return res.status(401).json({ 
+          error: "Zoho token expired", 
+          action: "reconnect" 
+        });
       }
-    );
-
-    res.json({ tasks: zohoResp.data.data || [] });
+      throw err;
+    }
   } catch (err) {
     console.error("Zoho tasks error:", err.response?.data || err.message);
-    res.status(500).json({ error: "Failed to fetch Zoho tasks", details: err.response?.data || err.message });
+    res.status(500).json({ 
+      error: "Failed to fetch Zoho tasks", 
+      details: err.response?.data || err.message 
+    });
   }
 });
 
