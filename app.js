@@ -346,7 +346,7 @@ async function getZohoAccessToken(refreshToken) {
   try {
       const resp = await axios.post(
         `https://accounts.zoho.${process.env.ZOHO_API_REGION || 'com'}/oauth/v2/token`,
-        params.toString(),
+        params,
         { 
           headers: { 
             "Content-Type": "application/x-www-form-urlencoded"
