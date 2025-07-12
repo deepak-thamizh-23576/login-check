@@ -271,4 +271,54 @@ app.get("/get-completed-tasks", verifyFirebaseToken, async (req, res) => {
   }
 });
 
+
+//------------------------Zoho CRM tasks integration------------------------
+
+// ...existing code...
+
+// Helper to get Zoho access token from refresh token
+async function getZohoAccessToken(refreshToken) {
+  const params = new URLSearchParams({
+    refresh_token: refreshToken,
+    client_id: process.env.ZOHO_CLIENT_ID,
+    client_secret: process.env.ZOHO_CLIENT_SECRET,
+    grant_type: "refresh_token",
+  });
+
+  const resp = await axios.post(
+    "https://accounts.zoho.com/oauth/v2/token",
+    params.toString(),
+    { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+  );
+  return resp.data.access_token;
+}
+
+// Endpoint to get Zoho CRM tasks for the logged-in user
+app.get("/zoho-tasks", verifyFirebaseToken, async (req, res) => {
+  try {
+    // Find user in DB
+    const user = await collection.findOne({ firebaseUid: req.user.uid });
+    if (!user || !user.zohoRefreshToken) {
+      return res.status(400).json({ error: "No Zoho refresh token found" });
+    }
+
+    // Get Zoho access token
+    const accessToken = await getZohoAccessToken(user.zohoRefreshToken);
+
+    // Fetch tasks from Zoho CRM
+    const zohoResp = await axios.get(
+      "https://www.zohoapis.com/crm/v2/Tasks",
+      {
+        headers: { Authorization: `Zoho-oauthtoken ${accessToken}` }
+      }
+    );
+
+    res.json({ tasks: zohoResp.data.data || [] });
+  } catch (err) {
+    console.error("Zoho tasks error:", err.message);
+    res.status(500).json({ error: "Failed to fetch Zoho tasks" });
+  }
+});
+// ...existing code...
+
 app.listen(3000, () => console.log("Server started on port 3000"));
